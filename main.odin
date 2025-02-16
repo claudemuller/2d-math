@@ -2,6 +2,8 @@ package blockmath
 
 import "core:fmt"
 import "core:math"
+import "core:mem"
+import "core:os"
 import rl "vendor:raylib"
 
 DEBUG_UI_SIZE :: 100
@@ -25,6 +27,20 @@ mouse_pos: rl.Vector2
 mouse_px_pos: rl.Vector2
 
 main :: proc() {
+	track: mem.Tracking_Allocator
+	mem.tracking_allocator_init(&track, context.allocator)
+	context.allocator = mem.tracking_allocator(&track)
+
+	defer {
+		for _, entry in track.allocation_map {
+			fmt.eprintf("%v leaked %v bytes\n", entry.location, entry.size)
+		}
+		for entry in track.bad_free_array {
+			fmt.eprintf("%v bad free\n", entry.location)
+		}
+		mem.tracking_allocator_destroy(&track)
+	}
+
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT + DEBUG_UI_SIZE, "Block math")
 	defer rl.CloseWindow()
 	rl.SetTargetFPS(60)
